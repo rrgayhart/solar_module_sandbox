@@ -1,14 +1,12 @@
 # load 'solar_module_sandbox/module_plugin.rb'
 require 'solar_module_sandbox/offset.rb'
 
-#Steps
+if( not $module_input_loaded )
+    add_separator_to_menu("Tools")
+    module_menu = UI.menu("Tools").add_submenu("Module Input")
 
-# [] Dropdown tool Solar Array Selected Face
-#
-
-def process_module_input(module_input)
-  puts module_input
-  # This is where the processing happens
+    module_menu.add_item("Add Solar Modules") { module_input_dialog }
+    $module_input_loaded = true
 end
 
 def module_input_dialog
@@ -23,16 +21,59 @@ def module_input_dialog
   dialog.show
 end
 
-if( not $module_input_loaded )
-    add_separator_to_menu("Tools")
-    module_menu = UI.menu("Tools").add_submenu("Module Input")
+def process_module_input(dialog)
+  module_data = {
+    width: dialog.get_element_value('mwidth'),
+    run: dialog.get_element_value('mrun'),
+    thickness: dialog.get_element_value('mthickness')
+  }
 
-    module_menu.add_item("Add Solar Modules") { module_input_dialog }
-    $module_input_loaded = true
+  generate_module(module_data)
 end
 
-#
-#
+def generate_module(module_data)
+  thickness = module_data[:thickness]
+  width = module_data[:width]
+  run = module_data[:run]
+
+  coordinates = face_coordinates(width, run)
+  model = Sketchup.active_model
+  group = model.entities.add_group
+  entities = group.entities
+  new_panel = entities.add_face(coordinates[0],
+                                coordinates[1],
+                                coordinates[2],
+                                coordinates[3])
+  new_panel.reverse!
+  new_panel.pushpull(thickness.to_f, true)
+  group.to_component
+  style_module(new_panel)
+end
+
+def style_module(original_face)
+  top_face = original_face.all_connected.find{|ent| ent.class == Sketchup::Face && ent.object_id != original_face.object_id && ent.area == original_face.area}
+  border = top_face.offset(-0.5)
+  thickness = '-0.1'
+  new_face = border.pushpull(thickness.to_f)
+  puts new_face.class
+end
+
+def face_coordinates(width, run)
+  # [[0, 0], [12, 0], [12, 24], [0, 24]]
+  x1 = 0
+  x2 = width.to_f
+  y1 = 0
+  y2 = run.to_f
+  pts = []
+  pts[0] = [x1, y1]
+  pts[1] = [x2, y1]
+  pts[2] = [x2, y2]
+  pts[3] = [x1, y2]
+  pts
+end
+
+# TODO
+
 # [] Grabs selected face
 # [] Pops up UI prompt to input module information
 # [] Make colors pretty!
@@ -41,6 +82,11 @@ end
 # [] Orients modules along southernmost line
 # [] Fills in modules along line
 # [] Backfills modules along calculated distance
+
+
+# [] Color module
+# [] Pop up prompt to outline location
+# [] Orient wide angle south
 
 #def process
   #surface = Sketchup.active_model.selection.entries.find{|ent| ent.class == Sketchup::Face}
@@ -51,81 +97,9 @@ end
   #end
 #end
 
-
-
-
-
-
-
-
-
-
-
-# TODO
-# [] Color module
-# [] Pop up prompt to outline location
-# [] Orient wide angle south
-
-#def fill_modules(surface)
-  #generate_module
-#end
-
-#def module_prompt
-  #prompts = ["Module Width?", "Module Run?", "Module Thickness?"]
-  #defaults = ["12", "24", "1"]
-  #UI.inputbox(prompts, defaults, "Enter Module Details (in inches)")
-#end
-
-#def style_module(original_face)
-  #top_face = original_face.all_connected.find{|ent| ent.class == Sketchup::Face && ent.object_id != original_face.object_id && ent.area == original_face.area}
-  ##top_face.material = 'blue'
-  #border = top_face.offset(-0.5)
-  #thickness = '-0.1'
-  #new_face = border.pushpull(thickness.to_f)
-  #puts new_face.class
-  ## Color all faces silver
-  ## Grab the inner face
-  ## set inner_face.material = 'blue'
-#end
-
 #def rotate(angle)
   #tr = Geom::Transformation.rotation([0,0,0],[1,0,0],angle.degrees)
   #Sketchup.active_model.active_entities.transform_entities(tr,Sketchup.active_model.selection)
-#end
-
-#def generate_module
-  #input = module_prompt
-
-  #thickness = input[2]
-  #width = input[0]
-  #run = input[1]
-
-  #coordinates = face_coordinates(width, run)
-  #model = Sketchup.active_model
-  #group = model.entities.add_group
-  #entities = group.entities
-  #new_panel = entities.add_face(coordinates[0],
-                                #coordinates[1],
-                                #coordinates[2],
-                                #coordinates[3])
-  #new_panel.reverse!
-  #new_panel.pushpull(thickness.to_f, true)
-  #group.to_component
-  #style_module(new_panel)
-#end
-
-#def face_coordinates(width, run)
-  ## [[0, 0], [12, 0], [12, 24], [0, 24]]
-  #x1 = 0
-  #x2 = width.to_f
-  #y1 = 0
-  #y2 = run.to_f
-  #pts = []
-  #pts[0] = [x1, y1]
-  #pts[1] = [x2, y1]
-  #pts[2] = [x2, y2]
-  #pts[3] = [x1, y2]
-  #pts
 #end
 
 # Create array of modules across a selected plain
