@@ -10,33 +10,47 @@ if( not $module_input_loaded )
 end
 
 def module_input_dialog
-  dialog = UI::WebDialog.new("Solar Module Plugin", false, "", 410, 875, 1030, 0, false)
+  surface = Sketchup.active_model.selection.entries.find{|ent| ent.class == Sketchup::Face}
+  if !surface
+    UI.messagebox('Please select the face and try again.')
+  else
+    dialog = UI::WebDialog.new("Solar Module Plugin", false, "", 410, 875, 1030, 0, false)
 
-  dialog.add_action_callback("generateModules") do |wdialog,value|
-    process_module_input(wdialog)
+    dialog.add_action_callback("generateModules") do |wdialog,value|
+      surface_data = process_surface_data(surface)
+      module_data = process_module_input(wdialog)
+      generate_module(module_data, surface_data)
+    end
+
+    html_path = Sketchup.find_support_file "solar_module_sandbox/module_input.html" ,"Plugins"
+    dialog.set_file(html_path)
+    dialog.show
   end
+end
 
-  html_path = Sketchup.find_support_file "solar_module_sandbox/module_input.html" ,"Plugins"
-  dialog.set_file(html_path)
-  dialog.show
+def process_surface_data(surface)
+  grouped_by_x = surface.vertices.group_by{ |v| v.position.x }
+  lowest_line = grouped_by_x.min
+  south_west = lowest_line[1].min_by{ |v| v.position.y.to_f }
+  {
+    starting_point: south_west
+  }
 end
 
 def process_module_input(dialog)
-  module_data = {
+  {
     width: dialog.get_element_value('mwidth'),
     run: dialog.get_element_value('mrun'),
     thickness: dialog.get_element_value('mthickness')
   }
-
-  generate_module(module_data)
 end
 
-def generate_module(module_data)
+def generate_module(module_data, surface_data)
   thickness = module_data[:thickness]
   width = module_data[:width]
   run = module_data[:run]
 
-  coordinates = face_coordinates(width, run)
+  coordinates = face_coordinates(surface_data, width, run)
   model = Sketchup.active_model
   group = model.entities.add_group
   entities = group.entities
@@ -44,58 +58,57 @@ def generate_module(module_data)
                                 coordinates[1],
                                 coordinates[2],
                                 coordinates[3])
-  new_panel.reverse!
   new_panel.pushpull(thickness.to_f, true)
-  group.to_component
-  style_module(new_panel)
+  comp = group.to_component
+  style_module(new_panel, comp)
 end
 
-def style_module(original_face)
+def style_module(original_face, comp)
   top_face = original_face.all_connected.find{|ent| ent.class == Sketchup::Face && ent.object_id != original_face.object_id && ent.area == original_face.area}
   border = top_face.offset(-0.5)
   thickness = '-0.1'
-  new_face = border.pushpull(thickness.to_f)
-  puts new_face.class
+  border.pushpull(thickness.to_f)
 end
 
-def face_coordinates(width, run)
+def face_coordinates(module_data, width, run)
   # [[0, 0], [12, 0], [12, 24], [0, 24]]
-  x1 = 0
-  x2 = width.to_f
-  y1 = 0
-  y2 = run.to_f
+  puts module_data
+  starting_point = module_data[:starting_point]
+  starting_x = starting_point.position.x.to_f
+  starting_y = starting_point.position.y.to_f
+  starting_z = starting_point.position.z.to_f
+  x1 = starting_x
+  x2 = starting_x + run.to_f
+  y1 = starting_y
+  y2 = starting_y + width.to_f
+  z = starting_z
   pts = []
-  pts[0] = [x1, y1]
-  pts[1] = [x2, y1]
-  pts[2] = [x2, y2]
-  pts[3] = [x1, y2]
+  pts[0] = [x1, y1, z]
+  pts[1] = [x2, y1, z]
+  pts[2] = [x2, y2, z]
+  pts[3] = [x1, y2, z]
   pts
 end
 
 # TODO
 
-# [] Grabs selected face
-# [] Pops up UI prompt to input module information
+# [x] Grabs selected face
+# [x] Pops up UI prompt to input module information
 # [] Make colors pretty!
 # [] Array tilt
 # [] Space between modules (default 1inch)
-# [] Orients modules along southernmost line
+# [x] Orients modules along southernmost line
 # [] Fills in modules along line
 # [] Backfills modules along calculated distance
 
+#TODO additional
+# [] Cleanup UI interface
 
 # [] Color module
 # [] Pop up prompt to outline location
 # [] Orient wide angle south
-
-#def process
-  #surface = Sketchup.active_model.selection.entries.find{|ent| ent.class == Sketchup::Face}
-  #if !surface
-    #UI.messagebox('Please select the face and try again.')
-  #else
-    #fill_modules(surface)
-  #end
-#end
+#
+# 
 
 #def rotate(angle)
   #tr = Geom::Transformation.rotation([0,0,0],[1,0,0],angle.degrees)
