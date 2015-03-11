@@ -60,14 +60,21 @@ def generate_module(module_data, surface_data)
                                 coordinates[3])
   new_panel.pushpull(thickness.to_f, true)
   comp = group.to_component
-  style_module(new_panel, comp)
+  comp_definition = comp.definition
+  style_module(new_panel, comp_definition)
 end
 
 def style_module(original_face, comp)
   top_face = original_face.all_connected.find{|ent| ent.class == Sketchup::Face && ent.object_id != original_face.object_id && ent.area == original_face.area}
   border = top_face.offset(-0.5)
+  panel_size = border.area
   thickness = '-0.1'
   border.pushpull(thickness.to_f)
+  top_face.all_connected.each do |ent| 
+    if ent.class == Sketchup::Face 
+      ent.area === panel_size ? ent.material = "blue" : ent.material = "silver"
+    end
+  end
 end
 
 def face_coordinates(module_data, width, run)
@@ -100,15 +107,11 @@ end
 # [x] Orients modules along southernmost line
 # [] Fills in modules along line
 # [] Backfills modules along calculated distance
+# [] Close UI element after button click
 
 #TODO additional
 # [] Cleanup UI interface
-
-# [] Color module
 # [] Pop up prompt to outline location
-# [] Orient wide angle south
-#
-# 
 
 #def rotate(angle)
   #tr = Geom::Transformation.rotation([0,0,0],[1,0,0],angle.degrees)
