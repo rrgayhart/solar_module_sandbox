@@ -90,12 +90,19 @@ def process_surface_data(surface)
   lowest_line = grouped_by_x.min
   south_west = lowest_line[1].min_by{ |v| v.position.y.to_f }
   first_edge = surface.edges.select{|e| e.end === south_west}[0]
+  y_edge = surface.edges.select{|e| e.end === south_west}[0]
   first_edge.other_vertex(south_west)
   {
     starting_point: south_west,
     first_edge: first_edge,
-    row_length: first_edge.length.to_inch
+    y_edge: y_edge,
+    row_length: first_edge.length.to_inch,
+    y_length: y_edge.length.to_inch
   }
+end
+
+def get_boundries(surface)
+  starts = surface.edges.collect{|e| e.start}
 end
 
 def process_module_input(dialog)
@@ -119,7 +126,7 @@ def generate_module(module_data, surface_data)
                                 coordinates[1],
                                 coordinates[2],
                                 coordinates[3])
-  new_panel.pushpull(thickness.to_f, true)
+  new_panel.pushpull(thickness.to_f, false)
   comp = group.to_component
   populate_rows(comp, run, surface_data[:row_length])
   comp_definition = comp.definition
