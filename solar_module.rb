@@ -8,7 +8,7 @@ class SolarModule
     :panel_color, :border_color
 
   def initialize(args)
-    @start = args[:start] || [0, 0, 0.01]
+    @start = args[:start] || Geom::Point3d.new([0, 0, 0.01])
     @width = args[:width] || 24
     @length = args[:length] || 12
     @thickness = args[:thickness] || 1
@@ -43,20 +43,16 @@ class SolarModule
 
   def add_new_instance(location)
     ents = Sketchup.active_model.entities
-    pt = Geom::Point3d.new(location)
-    trans = Geom::Transformation.new( pt )
+    trans = Geom::Transformation.new( location )
     ents.add_instance(panel_definition, trans)
   end
 
   def face_coordinates
-    starting_point = Geom::Point3d.new(start)
-
-    x1 = starting_point.x.to_f
+    x1 = start.x.to_f
     x2 = x1 + width.to_f
-    y1 = starting_point.y.to_f
+    y1 = start.y.to_f
     y2 = y1 + length.to_f
-    z = starting_point.z.to_f
-
+    z = start.z.to_f
     [
       [x1, y1, z],
       [x2, y1, z],
@@ -96,6 +92,4 @@ class SolarModule
       end
     end
   end
-
-
 end

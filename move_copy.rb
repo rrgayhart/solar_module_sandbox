@@ -27,5 +27,5 @@ For 15 steps, you make 14 copies.
       ents.add_instance( defi, trans )
       # add another instance at the new Point3d
     end
-
   end
+end
